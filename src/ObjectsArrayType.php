@@ -22,20 +22,33 @@ abstract class ObjectsArrayType extends NormalizableType
     /**
      * @throws ConversionException
      */
-    final protected function checkDatabaseValue($value): void
+    final protected function checkPhpValue($value): void
     {
-        if (!empty($value) && (!isset($value[0]) || !is_array($value[0]))) {
-            throw new ConversionException('Must be index array');
+        if (!is_array($value)) {
+            throw new ConversionException('Must be an array');
+        }
+        foreach ($value as $item) {
+            if (!is_a($item, $this->getObjectClass(), true)) {
+                throw new ConversionException('Item be an object of class ' . $this->getObjectClass());
+            }
         }
     }
 
     /**
      * @throws ConversionException
      */
-    final protected function checkPhpValue($value): void
+    final protected function checkDatabaseValue($value): void
     {
         if (!is_array($value)) {
             throw new ConversionException('Must be an array');
+        }
+
+        if (empty($value)) {
+            return;
+        }
+
+        if (array_keys($value) !== range(0, count($value) - 1)) {
+            throw new ConversionException('Must be an index array');
         }
     }
 

@@ -35,6 +35,31 @@ abstract class NormalizableType extends JsonType implements NormalizerAwareInter
     /**
      * @throws ConversionException
      */
+    final public function convertToDatabaseValue($value, AbstractPlatform $platform)
+    {
+        if (null === $value) {
+            return null;
+        }
+
+        $this->checkPhpValue($value);
+
+        $this->dispatchEvent($platform->getEventManager(), NormalizableTypeEvent::onPreNormalize);
+
+        return parent::convertToDatabaseValue($this->normalize($value), $platform);
+    }
+
+    protected function normalize($value) /* : mixed */
+    {
+        if (!$this->getNormalizer()->supportsNormalization($value)) {
+            throw new ConversionException('Normalization not supported');
+        }
+
+        return $this->getNormalizer()->normalize($value);
+    }
+
+    /**
+     * @throws ConversionException
+     */
     final public function convertToPHPValue($value, AbstractPlatform $platform)
     {
         $value = parent::convertToPHPValue($value, $platform);
@@ -56,36 +81,6 @@ abstract class NormalizableType extends JsonType implements NormalizerAwareInter
     /**
      * @throws ConversionException
      */
-    final public function convertToDatabaseValue($value, AbstractPlatform $platform)
-    {
-        if (null === $value) {
-            return null;
-        }
-
-        $this->checkPhpValue($value);
-
-        $this->dispatchEvent($platform->getEventManager(), NormalizableTypeEvent::onPreNormalize);
-
-        return parent::convertToDatabaseValue($this->normalize($value), $platform);
-    }
-
-    private function dispatchEvent(EventManager $eventManager, string $eventName): void
-    {
-        $eventManager->dispatchEvent($eventName, new NormalizableTypeEvent($this));
-    }
-
-    protected function normalize($value) /* : mixed */
-    {
-        if (!$this->getNormalizer()->supportsNormalization($value)) {
-            throw new ConversionException('Normalization not supported');
-        }
-
-        return $this->getNormalizer()->normalize($value);
-    }
-
-    /**
-     * @throws ConversionException
-     */
     private function denormalize(array $value) /* : mixed */
     {
         if (!$this->getDenormalizer()->supportsDenormalization($value, $this->getObjectClass())) {
@@ -93,6 +88,11 @@ abstract class NormalizableType extends JsonType implements NormalizerAwareInter
         }
 
         return $this->getDenormalizer()->denormalize($value, $this->getDenormalizationExpression(), JsonEncoder::FORMAT);
+    }
+
+    private function dispatchEvent(EventManager $eventManager, string $eventName): void
+    {
+        $eventManager->dispatchEvent($eventName, new NormalizableTypeEvent($this));
     }
 
     protected function getDenormalizationExpression(): string
@@ -108,7 +108,7 @@ abstract class NormalizableType extends JsonType implements NormalizerAwareInter
         return parent::getSQLDeclaration(array_merge($fieldDeclaration, ['jsonb' => true]), $platform);
     }
 
-    public function requiresSQLCommentHint(AbstractPlatform $platform)
+    final public function requiresSQLCommentHint(AbstractPlatform $platform)
     {
         return true;
     }
