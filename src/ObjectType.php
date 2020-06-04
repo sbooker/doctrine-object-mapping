@@ -8,9 +8,14 @@ use Doctrine\DBAL\Types\ConversionException;
 
 abstract class ObjectType extends NormalizableType
 {
-    final protected function normalize($value): array
+    /**
+     * @throws ConversionException
+     */
+    final protected function checkPhpValue($value): void
     {
-        return parent::normalize($value);
+        if (!is_a($value, $this->getObjectClass(), true)) {
+            throw new ConversionException('Must be an object of class ' . $this->getObjectClass());
+        }
     }
 
     /**
@@ -18,18 +23,10 @@ abstract class ObjectType extends NormalizableType
      */
     final protected function checkDatabaseValue($value): void
     {
-        if (empty($value) || array_keys($value) === range(0, count($value) - 1)) {
-            throw new ConversionException('Must be associative array');
-        }
-    }
-
-    /**
-     * @throws ConversionException
-     */
-    final protected function checkPhpValue($value): void
-    {
-        if (!is_object($value)) {
-            throw new ConversionException('Must be an object');
+        foreach (array_keys($value) as $key) {
+            if (is_numeric($key)) {
+                throw new ConversionException('Must be associative array');
+            }
         }
     }
 
