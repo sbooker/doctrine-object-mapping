@@ -18,10 +18,16 @@ final class ObjectsArrayTypeConvertToDatabaseValueTest extends TestCase
         $expectedNormalizeCalls = count($value);
 
         $type = new TestObjectArrayType();
-        $type->setNormalizer($this->getArrayNormalizer($value, $normalized, $expectedNormalizeCalls));
+        $spy = new NormalizerSpy($normalized);
+        $type->setNormalizer($spy);
         $platform = $this->getConfiguredPlatform(NormalizableTypeEvent::onPreNormalize, $type, 1);
 
         $result = $type->convertToDatabaseValue($value, $platform);
+
+        $this->assertEquals($expectedNormalizeCalls, $spy->getNormalizeCallCount());
+        $this->assertEquals($expectedNormalizeCalls, $spy->getSupportCallCount());
+        $this->assertEquals($value, $spy->getObjectsToNormalize());
+        $this->assertEquals($value, $spy->getObjectsToSupport());
 
         $this->assertEquals(json_encode($normalized), $result);
     }
@@ -35,22 +41,9 @@ final class ObjectsArrayTypeConvertToDatabaseValueTest extends TestCase
         ];
     }
 
-    private function getArrayNormalizer($expected, array $normalized, int $count = 1): NormalizerInterface
+    private function getArrayNormalizer(array $normalized): NormalizerSpy
     {
-        $expectedChain = array_map(function ($item): array { return [ $item ]; }, $expected);
-
-        $mock = $this->createMock(NormalizerInterface::class);
-        $mock->expects($this->exactly($count))
-            ->method('supportsNormalization')
-            ->withConsecutive(...$expectedChain)
-            ->willReturn(true);
-
-        $mock->expects($this->exactly($count))
-            ->method('normalize')
-            ->withConsecutive(...$expectedChain)
-            ->willReturnOnConsecutiveCalls(...$normalized);
-
-        return $mock;
+        return new NormalizerSpy($normalized);
     }
 
     /**

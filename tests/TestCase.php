@@ -34,7 +34,7 @@ abstract class TestCase extends \PHPUnit\Framework\TestCase
     final protected function getEventManager(string $eventName, ?EventArgs $eventArgs = null, int $count = 1): EventManager
     {
         $mock = $this->createMock(EventManager::class);
-        $mock->expects($this->exactly($count))->method('dispatchEvent')->with($eventName, $eventArgs)->willReturn(null);
+        $mock->expects($this->exactly($count))->method('dispatchEvent')->with($eventName, $eventArgs);
 
         return $mock;
     }
